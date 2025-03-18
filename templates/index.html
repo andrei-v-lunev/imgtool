@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Creative Text Adder</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Styling for the image preview container */
+    #preview-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 1rem;
+      cursor: crosshair;
+    }
+    
+    /* Prevent image dragging */
+    #preview-image {
+      -webkit-user-drag: none;
+      -khtml-user-drag: none;
+      -moz-user-drag: none;
+      -o-user-drag: none;
+      user-drag: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    
+    /* Text selection rectangle */
+    #selection-box {
+      position: absolute;
+      border: 2px dashed red;
+      background-color: rgba(255, 255, 255, 0.2);
+      display: none;
+      pointer-events: none; /* allow clicks to pass through */
+      overflow: hidden; /* for the dummy text */
+    }
+    
+    /* Dummy text within selection box */
+    #dummy-text {
+      font-family: sans-serif;
+      color: rgba(0, 0, 0, 0.7);
+      padding: 4px;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1>Creative Text Adder</h1>
+    
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-warning">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <form id="imageForm" method="post" enctype="multipart/form-data">
+      <!-- Image Upload -->
+      <div class="mb-3">
+        <label for="image_file" class="form-label">Base Image</label>
+        <input type="file" name="image_file" id="image_file" class="form-control" required>
+      </div>
+
+      <!-- Font Options -->
+      <div class="mb-3">
+        <label for="font_name" class="form-label">Font (TTF file name)</label>
+        <input type="text" name="font_name" id="font_name" class="form-control" placeholder="ProximaNova-Bold.ttf">
+      </div>
+      <div class="mb-3">
+        <label for="font_size" class="form-label">Font Size</label>
+        <input type="number" name="font_size" id="font_size" class="form-control" value="24">
+      </div>
+      <div class="mb-3">
+        <label for="font_color" class="form-label">Font Color (Hex)</label>
+        <input type="text" name="font_color" id="font_color" class="form-control" value="#ffffff">
+      </div>
+      <div class="mb-3">
+        <label for="alignment" class="form-label">Text Alignment</label>
+        <select name="alignment" id="alignment" class="form-select">
+          <option value="center" selected>Center</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+
+      <!-- Hidden fields for text position and dimensions -->
+      <input type="hidden" name="text_x" id="text_x" value="0">
+      <input type="hidden" name="text_y" id="text_y" value="0">
+      <input type="hidden" name="text_width" id="text_width" value="0">
+      <input type="hidden" name="text_height" id="text_height" value="0">
+
+      <!-- Image Preview and Position Selector -->
+      <div id="preview-container" class="mb-3" style="display: none;">
+        <img id="preview-image" src="#" alt="Image Preview" class="img-fluid">
+        <div id="selection-box">
+          <div id="dummy-text">Sample text</div>
+        </div>
+        <small class="text-muted">Click and drag to define the text area.</small>
+      </div>
+
+      <!-- Text Background Options -->
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="text_background" name="text_background">
+        <label class="form-check-label" for="text_background">
+          Enable Text Background
+        </label>
+      </div>
+      <div class="mb-3">
+        <label for="text_background_color" class="form-label">Text Background Color (Hex)</label>
+        <input type="text" name="text_background_color" id="text_background_color" class="form-control" placeholder="#000000">
+      </div>
+
+      <!-- Dummy Text for Preview -->
+      <div class="mb-3">
+        <label for="dummy_text" class="form-label">Preview Text</label>
+        <input type="text" id="dummy_text" class="form-control" value="Sample text" onchange="updateDummyText()">
+        <small class="text-muted">This text will be used for preview only.</small>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="btn btn-primary">Generate Images</button>
+    </form>
+  </div>
+
+  <script>
+    // Get element references
+    const imageFileInput = document.getElementById('image_file');
+    const previewContainer = document.getElementById('preview-container');
+    const previewImage = document.getElementById('preview-image');
+    const selectionBox = document.getElementById('selection-box');
+    const dummyText = document.getElementById('dummy-text');
+    const dummyTextInput = document.getElementById('dummy_text');
+    const textXInput = document.getElementById('text_x');
+    const textYInput = document.getElementById('text_y');
+    const textWidthInput = document.getElementById('text_width');
+    const textHeightInput = document.getElementById('text_height');
+    const fontSizeInput = document.getElementById('font_size');
+    const alignmentSelect = document.getElementById('alignment');
+
+    // When an image file is selected, show the preview
+    imageFileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        previewImage.src = event.target.result;
+        previewContainer.style.display = 'block';
+        selectionBox.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Variables for tracking the selection
+    let isSelecting = false;
+    let startX, startY;
+
+    // Event listeners for click-and-drag selection
+    previewContainer.addEventListener('mousedown', function(e) {
+      // Only respond if we clicked on the image
+      if (e.target !== previewImage) return;
+      
+      // Prevent the default browser drag behavior
+      e.preventDefault();
+      
+      const rect = previewImage.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      
+      // Start the selection
+      isSelecting = true;
+      
+      // Initial position of the selection box
+      selectionBox.style.display = 'block';
+      selectionBox.style.left = startX + 'px';
+      selectionBox.style.top = startY + 'px';
+      selectionBox.style.width = '0px';
+      selectionBox.style.height = '0px';
+      
+      // Update hidden inputs
+      textXInput.value = Math.floor(startX);
+      textYInput.value = Math.floor(startY);
+      textWidthInput.value = 0;
+      textHeightInput.value = 0;
+      
+      // Update dummy text
+      updateDummyTextAppearance();
+    });
+
+    previewContainer.addEventListener('mousemove', function(e) {
+      if (!isSelecting) return;
+      
+      // Prevent the default browser behavior
+      e.preventDefault();
+      
+      const rect = previewImage.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+      
+      // Calculate dimensions and ensure they're not negative
+      const width = Math.abs(currentX - startX);
+      const height = Math.abs(currentY - startY);
+      
+      // Calculate the top left position
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY);
+      
+      // Update selection box
+      selectionBox.style.left = left + 'px';
+      selectionBox.style.top = top + 'px';
+      selectionBox.style.width = width + 'px';
+      selectionBox.style.height = height + 'px';
+      
+      // Update hidden inputs for server-side processing
+      textXInput.value = Math.floor(left);
+      textYInput.value = Math.floor(top);
+      textWidthInput.value = Math.floor(width);
+      textHeightInput.value = Math.floor(height);
+      
+      // Update alignment of dummy text
+      updateDummyTextAppearance();
+    });
+
+    previewContainer.addEventListener('mouseup', function(e) {
+      isSelecting = false;
+      
+      // Ensure we register an area even on a simple click
+      if (parseInt(textWidthInput.value) === 0 || parseInt(textHeightInput.value) === 0) {
+        // Set a minimum size for the box (100x50 pixels)
+        selectionBox.style.width = '100px';
+        selectionBox.style.height = '50px';
+        textWidthInput.value = 100;
+        textHeightInput.value = 50;
+        
+        // Update dummy text
+        updateDummyTextAppearance();
+      }
+      
+      console.log("Selection area:", 
+                  textXInput.value, textYInput.value, 
+                  textWidthInput.value, textHeightInput.value);
+    });
+
+    // Click outside the image to cancel selection
+    document.addEventListener('mouseup', function(e) {
+      if (isSelecting) {
+        isSelecting = false;
+      }
+    });
+
+    // Update dummy text based on user input
+    function updateDummyText() {
+      dummyText.textContent = dummyTextInput.value || "Sample text";
+    }
+
+    // Update dummy text appearance based on form settings
+    function updateDummyTextAppearance() {
+      // Font size
+      dummyText.style.fontSize = fontSizeInput.value + 'px';
+      
+      // Alignment
+      const alignment = alignmentSelect.value;
+      dummyText.style.textAlign = alignment;
+      
+      // Update text
+      updateDummyText();
+    }
+
+    // Update appearance when font size or alignment changes
+    fontSizeInput.addEventListener('change', updateDummyTextAppearance);
+    alignmentSelect.addEventListener('change', updateDummyTextAppearance);
+    
+    // Initialize dummy text
+    updateDummyTextAppearance();
+  </script>
+</body>
+</html>
+</document_content>
+</invoke>
