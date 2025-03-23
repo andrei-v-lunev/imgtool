@@ -2,19 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Creative Text Adder</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Text Generator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
-    /* Styling for the image preview container */
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .top-bar {
+      padding: 8px 16px;
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 48px;
+    }
+
+    .main-layout {
+      display: flex;
+      height: calc(100vh - 48px);
+      overflow: hidden;
+    }
+
+    .panel {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .panel-left {
+      width: 320px;
+      border-right: 1px solid #eee;
+      background: #fff;
+    }
+
+    .panel-right {
+      flex: 1;
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .panel-content {
+      height: 100%;
+    }
+
     #preview-container {
       position: relative;
       display: inline-block;
-      margin-top: 1rem;
-      cursor: crosshair;
+      max-height: calc(100vh - 80px);
+      max-width: calc(100vw - 360px);
+      overflow: hidden;
     }
     
-    /* Prevent image dragging */
     #preview-image {
+      max-height: calc(100vh - 80px);
+      max-width: calc(100vw - 360px);
+      object-fit: contain;
       -webkit-user-drag: none;
       -khtml-user-drag: none;
       -moz-user-drag: none;
@@ -22,261 +77,849 @@
       user-drag: none;
       user-select: none;
       -webkit-user-select: none;
+      cursor: crosshair;
     }
-    
-    /* Text selection rectangle */
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (min-width: 1200px) {
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 8px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+      color: #333;
+      font-size: 13px;
+    }
+
+    .range-with-number {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+
+    .range-with-number input[type="range"] {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: #e9ecef;
+    }
+
+    .range-with-number input[type="number"] {
+      width: 60px;
+      height: 24px;
+      padding: 2px 4px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .font-select, select {
+      height: 28px;
+      padding: 2px 8px;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+      width: 100%;
+    }
+
+    .color-picker {
+      height: 28px;
+      padding: 2px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .panel-section {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .panel-section h2 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .help-text {
+      margin: 4px 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    #background-settings {
+      background: #f8f9fa;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .form-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .form-check input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+    }
+
+    .form-check label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .btn {
+      height: 32px;
+      padding: 0 16px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0069d9;
+    }
+
+    .btn-secondary {
+      background: #f8f9fa;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .btn-secondary:hover {
+      background: #e9ecef;
+    }
+
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+      background: #f8f9fa;
+      transition: border-color 0.2s;
+    }
+
+    .upload-area:hover {
+      border-color: #007bff;
+    }
+
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .file-input-label svg {
+      color: #007bff;
+      width: 20px;
+      height: 20px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+    }
+
+    .modal-content {
+      position: relative;
+      background: white;
+      margin: 10vh auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .steps-list {
+      padding-left: 20px;
+      line-height: 1.6;
+    }
+
+    .steps-list li {
+      margin-bottom: 8px;
+    }
+
+    /* Preview and selection styles */
     #selection-box {
       position: absolute;
-      border: 2px dashed red;
-      background-color: rgba(255, 255, 255, 0.2);
+      border: 2px dashed #007bff;
+      background-color: rgba(0, 123, 255, 0.1);
       display: none;
-      pointer-events: none; /* allow clicks to pass through */
-      overflow: hidden; /* for the dummy text */
+      pointer-events: none;
+      overflow: hidden;
+      box-sizing: border-box;
+      backdrop-filter: blur(1px);
     }
-    
-    /* Dummy text within selection box */
+
     #dummy-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       font-family: sans-serif;
       color: rgba(0, 0, 0, 0.7);
-      padding: 4px;
       overflow-wrap: break-word;
       word-break: break-word;
       pointer-events: none;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      padding: 8px;
+    }
+
+    #dummy-text span {
+      display: inline-block;
+      padding: 4px;
+      box-sizing: border-box;
+      max-width: 100%;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Results section */
+    .results-section {
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .main-result {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .main-result img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .alignment-buttons {
+      display: flex;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .btn-icon {
+      flex: 1;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      color: #666;
+      transition: all 0.2s;
+    }
+
+    .btn-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .btn-icon:hover {
+      background: #e9ecef;
+      color: #333;
+    }
+
+    .btn-icon.active {
+      background: #007bff;
+      border-color: #007bff;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <div class="container mt-5">
-    <h1>Creative Text Adder</h1>
-    
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-warning">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    
-    <form id="imageForm" method="post" enctype="multipart/form-data">
-      <!-- Image Upload -->
-      <div class="mb-3">
-        <label for="image_file" class="form-label">Base Image</label>
-        <input type="file" name="image_file" id="image_file" class="form-control" required>
+  <div class="app-container">
+    <!-- Top bar -->
+    <header class="top-bar">
+      <h1>Image Text Generator</h1>
+      <div class="top-bar-actions">
+        <button type="button" class="btn btn-secondary" id="helpBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 14A6 6 0 108 2a6 6 0 000 12zM8 5.5v.5m0 1.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          How to Use
+        </button>
       </div>
+    </header>
 
-      <!-- Font Options -->
-      <div class="mb-3">
-        <label for="font_name" class="form-label">Font (TTF file name)</label>
-        <input type="text" name="font_name" id="font_name" class="form-control" placeholder="ProximaNova-Bold.ttf">
-      </div>
-      <div class="mb-3">
-        <label for="font_size" class="form-label">Font Size</label>
-        <input type="number" name="font_size" id="font_size" class="form-control" value="24">
-      </div>
-      <div class="mb-3">
-        <label for="font_color" class="form-label">Font Color (Hex)</label>
-        <input type="text" name="font_color" id="font_color" class="form-control" value="#ffffff">
-      </div>
-      <div class="mb-3">
-        <label for="alignment" class="form-label">Text Alignment</label>
-        <select name="alignment" id="alignment" class="form-select">
-          <option value="center" selected>Center</option>
-          <option value="left">Left</option>
-          <option value="right">Right</option>
-        </select>
-      </div>
+    <div class="main-layout">
+      <!-- Left panel -->
+      <div class="panel panel-left">
+        <div class="panel-content">
+          <form id="imageForm" method="post" enctype="multipart/form-data">
+            <div class="panel-section">
+              <h2>1. Upload Image</h2>
+              <div class="upload-area">
+                <input type="file" name="image_file" id="image_file" accept="image/*" required>
+                <label for="image_file" class="file-input-label">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14m-7-7l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  <span>Choose an image or drag it here</span>
+                </label>
+              </div>
+            </div>
 
-      <!-- Hidden fields for text position and dimensions -->
-      <input type="hidden" name="text_x" id="text_x" value="0">
-      <input type="hidden" name="text_y" id="text_y" value="0">
-      <input type="hidden" name="text_width" id="text_width" value="0">
-      <input type="hidden" name="text_height" id="text_height" value="0">
+            <div class="panel-section">
+              <h2>2. Style Settings</h2>
+              <div class="settings-grid">
+                <div class="form-group">
+                  <label for="sheet_name">Sheet</label>
+                  <select name="sheet_name" id="sheet_name" class="font-select">
+                    {% for sheet in sheets %}
+                    <option value="{{ sheet }}" {% if sheet == request.args.get('sheet', 'Sheet1') %}selected{% endif %}>{{ sheet }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-      <!-- Image Preview and Position Selector -->
-      <div id="preview-container" class="mb-3" style="display: none;">
-        <img id="preview-image" src="#" alt="Image Preview" class="img-fluid">
-        <div id="selection-box">
-          <div id="dummy-text">Sample text</div>
+                <div class="form-group">
+                  <label for="font_name">Font</label>
+                  <select name="font_name" id="font_name" class="font-select">
+                    {% for font in fonts %}
+                    <option value="{{ font }}" {% if font == 'ProximaNova-Bold.ttf' %}selected{% endif %}>{{ font }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="font_color">Color</label>
+                  <input type="color" name="font_color" id="font_color" value="#ffffff" class="color-picker">
+                </div>
+
+                <div class="form-group">
+                  <label for="font_size">Size</label>
+                  <div class="range-with-number">
+                    <input type="range" name="font_size" id="font_size" min="8" max="200" value="24" class="slider">
+                    <input type="number" id="font_size_number" value="24" min="8" max="200">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="alignment">Align</label>
+                  <div class="alignment-buttons">
+                    <button type="button" class="btn btn-icon" data-align="left">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="btn btn-icon active" data-align="center">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M3 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                    <button type="button" class="btn btn-icon" data-align="right">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M6 8h8M4 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <input type="hidden" name="alignment" id="alignment" value="center">
+                </div>
+              </div>
+
+              <div class="form-check">
+                <input type="checkbox" id="text_background" name="text_background">
+                <label for="text_background">Add Text Background</label>
+              </div>
+
+              <div id="background-settings" style="display: none;">
+                <div class="form-group" id="background-color-group">
+                  <label for="text_background_color">Background Color</label>
+                  <input type="color" name="text_background_color" id="text_background_color" value="#000000" class="color-picker">
+                </div>
+
+                <div class="form-group">
+                  <label for="bg_vertical_padding">Vertical Padding</label>
+                  <div class="range-with-number">
+                    <input type="range" name="bg_vertical_padding" id="bg_vertical_padding" min="0" max="100" value="10" class="slider">
+                    <input type="number" id="bg_vertical_padding_number" value="10" min="0" max="100">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="bg_horizontal_padding">Horizontal Padding</label>
+                  <div class="range-with-number">
+                    <input type="range" name="bg_horizontal_padding" id="bg_horizontal_padding" min="0" max="100" value="20" class="slider">
+                    <input type="number" id="bg_horizontal_padding_number" value="20" min="0" max="100">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="bg_corner_radius">Corner Radius</label>
+                  <div class="range-with-number">
+                    <input type="range" name="bg_corner_radius" id="bg_corner_radius" min="0" max="50" value="5" class="slider">
+                    <input type="number" id="bg_corner_radius_number" value="5" min="0" max="50">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hidden position inputs -->
+            <input type="hidden" name="text_x" id="text_x" value="0">
+            <input type="hidden" name="text_y" id="text_y" value="0">
+            <input type="hidden" name="text_width" id="text_width" value="0">
+            <input type="hidden" name="text_height" id="text_height" value="0">
+
+            <div class="panel-section">
+              <button type="submit" class="btn btn-primary">Generate Images</button>
+            </div>
+          </form>
         </div>
-        <small class="text-muted">Click and drag to define the text area.</small>
       </div>
 
-      <!-- Text Background Options -->
-      <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" id="text_background" name="text_background">
-        <label class="form-check-label" for="text_background">
-          Enable Text Background
-        </label>
-      </div>
-      <div class="mb-3">
-        <label for="text_background_color" class="form-label">Text Background Color (Hex)</label>
-        <input type="text" name="text_background_color" id="text_background_color" class="form-control" placeholder="#000000">
-      </div>
+      <!-- Right panel -->
+      <div class="panel panel-right">
+        <div class="panel-content">
+          <!-- Preview section -->
+          <div class="preview-section" style="display: none;">
+            <div id="preview-container">
+              <img id="preview-image" src="#" alt="Preview">
+              <div id="selection-box">
+                <div id="dummy-text">{{ sample_text }}</div>
+              </div>
+            </div>
+          </div>
 
-      <!-- Dummy Text for Preview -->
-      <div class="mb-3">
-        <label for="dummy_text" class="form-label">Preview Text</label>
-        <input type="text" id="dummy_text" class="form-control" value="Sample text" onchange="updateDummyText()">
-        <small class="text-muted">This text will be used for preview only.</small>
+          <!-- Results section -->
+          {% if results %}
+          <div class="results-section">
+            {% if results|length > 0 %}
+            <div class="main-result">
+              {% if results[0].image_data %}
+              <img src="data:image/png;base64,{{ results[0].image_data }}" alt="Generated image">
+              {% endif %}
+              <div class="result-actions">
+                <a href="{{ url_for('download_file', filename=results[0].filename) }}" class="btn btn-primary">Download First Image</a>
+                {% if total_processed %}
+                <a href="{{ url_for('generated_images') }}" class="btn btn-secondary">View All Images ({{ total_processed }})</a>
+                {% else %}
+                <a href="{{ url_for('generated_images') }}" class="btn btn-secondary">View All Images ({{ results|length }})</a>
+                {% endif %}
+              </div>
+              {% if total_processed %}
+              <div class="help-text">Successfully generated {{ total_processed }} images. Only showing preview of the first image.</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Submit Button -->
-      <button type="submit" class="btn btn-primary">Generate Images</button>
-    </form>
+  <!-- Help modal -->
+  <div id="helpModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>How to Use</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <ol class="steps-list">
+          <li>Upload your base image by dragging it into the upload area or clicking to select</li>
+          <li>Click and drag on the image to select where you want the text to appear</li>
+          <li>Customize the text appearance using the style settings</li>
+          <li>Click "Generate Images" to create images with text from your Google Sheet</li>
+        </ol>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Get element references
+    // Add sample text variable
+    const sampleText = "{{ sample_text }}";
     const imageFileInput = document.getElementById('image_file');
+    const previewSection = document.querySelector('.preview-section');
     const previewContainer = document.getElementById('preview-container');
     const previewImage = document.getElementById('preview-image');
     const selectionBox = document.getElementById('selection-box');
     const dummyText = document.getElementById('dummy-text');
-    const dummyTextInput = document.getElementById('dummy_text');
     const textXInput = document.getElementById('text_x');
     const textYInput = document.getElementById('text_y');
     const textWidthInput = document.getElementById('text_width');
     const textHeightInput = document.getElementById('text_height');
-    const fontSizeInput = document.getElementById('font_size');
-    const alignmentSelect = document.getElementById('alignment');
+    const fileInputLabel = document.querySelector('.file-input-label');
 
-    // When an image file is selected, show the preview
+    let isSelecting = false;
+    let startX, startY;
+
+    // File input handling
     imageFileInput.addEventListener('change', function(e) {
       const file = e.target.files[0];
-      if (!file) return;
+      if (!file) {
+        previewSection.style.display = 'none';
+        return;
+      }
+      
+      fileInputLabel.textContent = file.name;
+      
       const reader = new FileReader();
       reader.onload = function(event) {
         previewImage.src = event.target.result;
-        previewContainer.style.display = 'block';
+        previewSection.style.display = 'block';
+        previewContainer.style.display = 'flex';
         selectionBox.style.display = 'none';
       };
       reader.readAsDataURL(file);
     });
 
-    // Variables for tracking the selection
-    let isSelecting = false;
-    let startX, startY;
+    // Drag and drop handling
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      fileInputLabel.addEventListener(eventName, preventDefaults, false);
+    });
 
-    // Event listeners for click-and-drag selection
-    previewContainer.addEventListener('mousedown', function(e) {
-      // Only respond if we clicked on the image
-      if (e.target !== previewImage) return;
+    function preventDefaults (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      fileInputLabel.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      fileInputLabel.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+      fileInputLabel.classList.add('highlight');
+    }
+
+    function unhighlight(e) {
+      fileInputLabel.classList.remove('highlight');
+    }
+
+    fileInputLabel.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const file = dt.files[0];
+      if (!file) {
+        previewSection.style.display = 'none';
+        return;
+      }
+
+      imageFileInput.files = dt.files;
+      fileInputLabel.textContent = file.name;
       
-      // Prevent the default browser drag behavior
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        previewImage.src = event.target.result;
+        previewSection.style.display = 'block';
+        previewContainer.style.display = 'flex';
+        selectionBox.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Selection box handling
+    previewContainer.addEventListener('mousedown', function(e) {
+      if (e.target !== previewImage) return;
       e.preventDefault();
       
       const rect = previewImage.getBoundingClientRect();
+      const scaleX = previewImage.naturalWidth / rect.width;
+      const scaleY = previewImage.naturalHeight / rect.height;
+      
       startX = e.clientX - rect.left;
       startY = e.clientY - rect.top;
       
-      // Start the selection
       isSelecting = true;
-      
-      // Initial position of the selection box
       selectionBox.style.display = 'block';
       selectionBox.style.left = startX + 'px';
       selectionBox.style.top = startY + 'px';
       selectionBox.style.width = '0px';
       selectionBox.style.height = '0px';
       
-      // Update hidden inputs
-      textXInput.value = Math.floor(startX);
-      textYInput.value = Math.floor(startY);
-      textWidthInput.value = 0;
-      textHeightInput.value = 0;
-      
-      // Update dummy text
-      updateDummyTextAppearance();
+      // Store actual image coordinates
+      textXInput.value = Math.floor(startX * scaleX);
+      textYInput.value = Math.floor(startY * scaleY);
     });
 
     previewContainer.addEventListener('mousemove', function(e) {
       if (!isSelecting) return;
-      
-      // Prevent the default browser behavior
       e.preventDefault();
       
       const rect = previewImage.getBoundingClientRect();
+      const scaleX = previewImage.naturalWidth / rect.width;
+      const scaleY = previewImage.naturalHeight / rect.height;
+      
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
       
-      // Calculate dimensions and ensure they're not negative
       const width = Math.abs(currentX - startX);
       const height = Math.abs(currentY - startY);
-      
-      // Calculate the top left position
       const left = Math.min(startX, currentX);
       const top = Math.min(startY, currentY);
       
-      // Update selection box
       selectionBox.style.left = left + 'px';
       selectionBox.style.top = top + 'px';
       selectionBox.style.width = width + 'px';
       selectionBox.style.height = height + 'px';
       
-      // Update hidden inputs for server-side processing
-      textXInput.value = Math.floor(left);
-      textYInput.value = Math.floor(top);
-      textWidthInput.value = Math.floor(width);
-      textHeightInput.value = Math.floor(height);
+      // Store actual image coordinates
+      textXInput.value = Math.floor(left * scaleX);
+      textYInput.value = Math.floor(top * scaleY);
+      textWidthInput.value = Math.floor(width * scaleX);
+      textHeightInput.value = Math.floor(height * scaleY);
       
-      // Update alignment of dummy text
-      updateDummyTextAppearance();
+      updatePreview();
     });
 
-    previewContainer.addEventListener('mouseup', function(e) {
-      isSelecting = false;
-      
-      // Ensure we register an area even on a simple click
-      if (parseInt(textWidthInput.value) === 0 || parseInt(textHeightInput.value) === 0) {
-        // Set a minimum size for the box (100x50 pixels)
-        selectionBox.style.width = '100px';
-        selectionBox.style.height = '50px';
-        textWidthInput.value = 100;
-        textHeightInput.value = 50;
-        
-        // Update dummy text
-        updateDummyTextAppearance();
-      }
-      
-      console.log("Selection area:", 
-                  textXInput.value, textYInput.value, 
-                  textWidthInput.value, textHeightInput.value);
-    });
-
-    // Click outside the image to cancel selection
-    document.addEventListener('mouseup', function(e) {
+    document.addEventListener('mouseup', function() {
       if (isSelecting) {
         isSelecting = false;
+        if (parseInt(textWidthInput.value) === 0 || parseInt(textHeightInput.value) === 0) {
+          const rect = previewImage.getBoundingClientRect();
+          const scaleX = previewImage.naturalWidth / rect.width;
+          const scaleY = previewImage.naturalHeight / rect.height;
+          
+          selectionBox.style.width = '100px';
+          selectionBox.style.height = '50px';
+          textWidthInput.value = Math.floor(100 * scaleX);
+          textHeightInput.value = Math.floor(50 * scaleY);
+        }
+        updatePreview();
       }
     });
 
-    // Update dummy text based on user input
-    function updateDummyText() {
-      dummyText.textContent = dummyTextInput.value || "Sample text";
-    }
-
-    // Update dummy text appearance based on form settings
-    function updateDummyTextAppearance() {
-      // Font size
-      dummyText.style.fontSize = fontSizeInput.value + 'px';
-      
-      // Alignment
-      const alignment = alignmentSelect.value;
-      dummyText.style.textAlign = alignment;
-      
-      // Update text
-      updateDummyText();
-    }
-
-    // Update appearance when font size or alignment changes
-    fontSizeInput.addEventListener('change', updateDummyTextAppearance);
-    alignmentSelect.addEventListener('change', updateDummyTextAppearance);
+    // Background settings visibility toggle
+    const textBackgroundCheck = document.getElementById('text_background');
+    const backgroundSettings = document.getElementById('background-settings');
     
-    // Initialize dummy text
-    updateDummyTextAppearance();
+    textBackgroundCheck.addEventListener('change', function() {
+      backgroundSettings.style.display = this.checked ? 'block' : 'none';
+      updatePreview();
+    });
+
+    // Initialize background settings visibility
+    backgroundSettings.style.display = textBackgroundCheck.checked ? 'block' : 'none';
+
+    // Sync range and number inputs
+    function setupRangeWithNumber(rangeName) {
+      const range = document.getElementById(rangeName);
+      const number = document.getElementById(rangeName + '_number');
+      
+      range.addEventListener('input', function() {
+        number.value = this.value;
+        updatePreview();
+      });
+      
+      number.addEventListener('input', function() {
+        range.value = this.value;
+        updatePreview();
+      });
+    }
+
+    setupRangeWithNumber('bg_vertical_padding');
+    setupRangeWithNumber('bg_horizontal_padding');
+    setupRangeWithNumber('bg_corner_radius');
+    setupRangeWithNumber('font_size');
+
+    function updatePreview() {
+      if (!selectionBox.style.display || selectionBox.style.display === 'none') return;
+
+      const dummyText = document.getElementById('dummy-text');
+      let textSpan = dummyText.querySelector('span');
+      
+      if (!textSpan) {
+        textSpan = document.createElement('span');
+        textSpan.textContent = sampleText;
+        dummyText.innerHTML = '';
+        dummyText.appendChild(textSpan);
+      }
+      
+      // Update text alignment
+      dummyText.style.textAlign = document.getElementById('alignment').value;
+
+      // Update text color and font size
+      textSpan.style.color = document.getElementById('font_color').value;
+      textSpan.style.fontSize = document.getElementById('font_size').value + 'px';
+
+      // Update background if enabled
+      if (textBackgroundCheck.checked) {
+        const bgColor = document.getElementById('text_background_color').value;
+        const verticalPadding = document.getElementById('bg_vertical_padding').value + 'px';
+        const horizontalPadding = document.getElementById('bg_horizontal_padding').value + 'px';
+        const cornerRadius = document.getElementById('bg_corner_radius').value + 'px';
+
+        textSpan.style.backgroundColor = bgColor;
+        textSpan.style.padding = `${verticalPadding} ${horizontalPadding}`;
+        textSpan.style.borderRadius = cornerRadius;
+      } else {
+        textSpan.style.backgroundColor = 'transparent';
+        textSpan.style.padding = '4px';
+        textSpan.style.borderRadius = '0';
+      }
+    }
+
+    // Add event listeners for background color changes
+    document.getElementById('text_background_color').addEventListener('input', updatePreview);
+    document.getElementById('font_color').addEventListener('input', updatePreview);
+
+    // Update the showSelectionBox function to include preview updates
+    function showSelectionBox(x, y, width, height) {
+      selectionBox.style.display = 'block';
+      selectionBox.style.left = x + 'px';
+      selectionBox.style.top = y + 'px';
+      selectionBox.style.width = width + 'px';
+      selectionBox.style.height = height + 'px';
+      
+      const dummyText = document.getElementById('dummy-text');
+      let textSpan = dummyText.querySelector('span');
+      if (!textSpan) {
+        textSpan = document.createElement('span');
+        textSpan.textContent = sampleText;
+        dummyText.innerHTML = '';
+        dummyText.appendChild(textSpan);
+      }
+      
+      updatePreview();
+    }
+
+    // Add alignment button handling
+    const alignmentButtons = document.querySelectorAll('.alignment-buttons button');
+    const alignmentInput = document.getElementById('alignment');
+
+    alignmentButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Remove active class from all buttons
+        alignmentButtons.forEach(btn => btn.classList.remove('active'));
+        // Add active class to clicked button
+        this.classList.add('active');
+        // Update hidden input value
+        alignmentInput.value = this.dataset.align;
+        // Update preview
+        updatePreview();
+      });
+    });
+
+    // Help modal functionality
+    const modal = document.getElementById('helpModal');
+    const helpBtn = document.getElementById('helpBtn');
+    const closeBtn = document.querySelector('.modal-close');
+
+    helpBtn.onclick = function() {
+      modal.style.display = "block";
+    }
+
+    closeBtn.onclick = function() {
+      modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+
+    // Sheet selector functionality
+    const sheetSelect = document.getElementById('sheet_name');
+    sheetSelect.addEventListener('change', function() {
+      // Update hidden input value
+      const selectedSheet = this.value;
+      
+      // Fetch new sample text
+      fetch(`/sample_text/${selectedSheet}`)
+        .then(response => response.json())
+        .then(data => {
+          // Update sample text
+          const dummyText = document.getElementById('dummy-text');
+          let textSpan = dummyText.querySelector('span');
+          if (!textSpan) {
+            textSpan = document.createElement('span');
+            dummyText.innerHTML = '';
+            dummyText.appendChild(textSpan);
+          }
+          textSpan.textContent = data.sample_text;
+          
+          // Update preview if selection box is visible
+          if (selectionBox.style.display !== 'none') {
+            updatePreview();
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching sample text:', error);
+        });
+    });
   </script>
 </body>
 </html>
-</document_content>
-</invoke>

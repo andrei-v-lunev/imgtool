@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Images</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="gallery-header">
+            <h1>Generated Images</h1>
+            <a href="/" class="btn btn-secondary">Back to Generator</a>
+        </div>
+        <div class="gallery-grid">
+            {% for file in files %}
+            <div class="gallery-item">
+                <img src="{{ file.url }}" alt="{{ file.name }}">
+                <div class="gallery-item-actions">
+                    <a href="{{ url_for('download_file', filename=file.name) }}" class="btn">Download</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html> 
