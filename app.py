@@ -361,7 +361,8 @@ def index():
                     result = Image.alpha_composite(image, txt_layer)
                     
                     # Save result
-                    output_filename = f"output_{len(results)}_{file.filename}"
+                    base_filename = os.path.splitext(file.filename)[0]  # Get filename without extension
+                    output_filename = f"{base_filename}_HD-{len(results)+1:02d}.png"
                     output_path = os.path.join('outputs', output_filename)
                     result.save(output_path)
                     
@@ -426,4 +427,4 @@ if __name__ == '__main__':
     # Ensure required directories exist
     os.makedirs('uploads', exist_ok=True)
     os.makedirs('outputs', exist_ok=True)
-    app.run(debug=True)
+    app.run(debug=True, port=5005)

@@ -434,8 +434,8 @@
                   </svg>
                   <span>Choose an image or drag it here</span>
                 </label>
-              </div>
-            </div>
+      </div>
+      </div>
 
             <div class="panel-section">
               <h2>2. Style Settings</h2>
@@ -447,7 +447,7 @@
                     <option value="{{ sheet }}" {% if sheet == request.args.get('sheet', 'Sheet1') %}selected{% endif %}>{{ sheet }}</option>
                     {% endfor %}
                   </select>
-                </div>
+      </div>
 
                 <div class="form-group">
                   <label for="font_name">Font</label>
@@ -455,8 +455,8 @@
                     {% for font in fonts %}
                     <option value="{{ font }}" {% if font == 'ProximaNova-Bold.ttf' %}selected{% endif %}>{{ font }}</option>
                     {% endfor %}
-                  </select>
-                </div>
+        </select>
+      </div>
 
                 <div class="form-group">
                   <label for="font_color">Color</label>
@@ -531,11 +531,26 @@
               </div>
             </div>
 
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Base Name</label>
+                    <input type="text" id="baseName" name="base_name" class="w-full px-2 py-1 text-xs border rounded" value="image">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Start Number</label>
+                    <input type="number" id="startNumber" name="start_number" class="w-full px-2 py-1 text-xs border rounded" value="1" min="1">
+                </div>
+            </div>
+            <div class="mt-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Start Row (1-based)</label>
+                <input type="number" id="startRow" name="start_row" class="w-full px-2 py-1 text-xs border rounded" value="1" min="1">
+            </div>
+
             <!-- Hidden position inputs -->
-            <input type="hidden" name="text_x" id="text_x" value="0">
-            <input type="hidden" name="text_y" id="text_y" value="0">
-            <input type="hidden" name="text_width" id="text_width" value="0">
-            <input type="hidden" name="text_height" id="text_height" value="0">
+      <input type="hidden" name="text_x" id="text_x" value="0">
+      <input type="hidden" name="text_y" id="text_y" value="0">
+      <input type="hidden" name="text_width" id="text_width" value="0">
+      <input type="hidden" name="text_height" id="text_height" value="0">
 
             <div class="panel-section">
               <button type="submit" class="btn btn-primary">Generate Images</button>
@@ -617,6 +632,7 @@
     const textWidthInput = document.getElementById('text_width');
     const textHeightInput = document.getElementById('text_height');
     const fileInputLabel = document.querySelector('.file-input-label');
+    let textSpan = null; // Define textSpan globally
 
     let isSelecting = false;
     let startX, startY;
@@ -746,14 +762,14 @@
 
     document.addEventListener('mouseup', function() {
       if (isSelecting) {
-        isSelecting = false;
+      isSelecting = false;
         if (parseInt(textWidthInput.value) === 0 || parseInt(textHeightInput.value) === 0) {
           const rect = previewImage.getBoundingClientRect();
           const scaleX = previewImage.naturalWidth / rect.width;
           const scaleY = previewImage.naturalHeight / rect.height;
-          
-          selectionBox.style.width = '100px';
-          selectionBox.style.height = '50px';
+      
+        selectionBox.style.width = '100px';
+        selectionBox.style.height = '50px';
           textWidthInput.value = Math.floor(100 * scaleX);
           textHeightInput.value = Math.floor(50 * scaleY);
         }
@@ -795,11 +811,11 @@
     setupRangeWithNumber('font_size');
 
     function updatePreview() {
-      if (!selectionBox.style.display || selectionBox.style.display === 'none') return;
-
-      const dummyText = document.getElementById('dummy-text');
-      let textSpan = dummyText.querySelector('span');
+      if (!selectionBox || selectionBox.style.display === 'none') return;
       
+      // Get or create the textSpan element
+      const dummyText = document.getElementById('dummy-text');
+      textSpan = dummyText.querySelector('span');
       if (!textSpan) {
         textSpan = document.createElement('span');
         textSpan.textContent = sampleText;
@@ -807,33 +823,53 @@
         dummyText.appendChild(textSpan);
       }
       
+      const x = parseInt(document.getElementById('text_x').value);
+      const y = parseInt(document.getElementById('text_y').value);
+      const width = parseInt(document.getElementById('text_width').value);
+      const height = parseInt(document.getElementById('text_height').value);
+      
+      selectionBox.style.left = x + 'px';
+      selectionBox.style.top = y + 'px';
+      selectionBox.style.width = width + 'px';
+      selectionBox.style.height = height + 'px';
+      
+      textSpan.style.width = width + 'px';
+      textSpan.style.height = height + 'px';
+      textSpan.style.left = x + 'px';
+      textSpan.style.top = y + 'px';
+      
       // Update text alignment
-      dummyText.style.textAlign = document.getElementById('alignment').value;
-
+      textSpan.style.textAlign = document.getElementById('alignment').value;
+      
       // Update text color and font size
       textSpan.style.color = document.getElementById('font_color').value;
       textSpan.style.fontSize = document.getElementById('font_size').value + 'px';
-
-      // Update background if enabled
-      if (textBackgroundCheck.checked) {
-        const bgColor = document.getElementById('text_background_color').value;
-        const verticalPadding = document.getElementById('bg_vertical_padding').value + 'px';
-        const horizontalPadding = document.getElementById('bg_horizontal_padding').value + 'px';
-        const cornerRadius = document.getElementById('bg_corner_radius').value + 'px';
-
-        textSpan.style.backgroundColor = bgColor;
-        textSpan.style.padding = `${verticalPadding} ${horizontalPadding}`;
-        textSpan.style.borderRadius = cornerRadius;
+      
+      // Update font family
+      const fontSelect = document.getElementById('font_name');
+      const selectedFont = fontSelect.options[fontSelect.selectedIndex].value;
+      // Extract font family name from file name (remove extension)
+      const fontFamily = selectedFont.replace(/\.(ttf|otf)$/i, '');
+      textSpan.style.fontFamily = `"${fontFamily}", sans-serif`;
+      
+      // Update text background
+      const useBackground = document.getElementById('text_background').checked;
+      if (useBackground) {
+          textSpan.style.backgroundColor = document.getElementById('text_background_color').value;
+          textSpan.style.padding = '10px';
+          textSpan.style.borderRadius = '5px';
       } else {
-        textSpan.style.backgroundColor = 'transparent';
-        textSpan.style.padding = '4px';
-        textSpan.style.borderRadius = '0';
+          textSpan.style.backgroundColor = 'transparent';
+          textSpan.style.padding = '0';
       }
     }
 
     // Add event listeners for background color changes
     document.getElementById('text_background_color').addEventListener('input', updatePreview);
     document.getElementById('font_color').addEventListener('input', updatePreview);
+    
+    // Add font change listener
+    document.getElementById('font_name').addEventListener('change', updatePreview);
 
     // Update the showSelectionBox function to include preview updates
     function showSelectionBox(x, y, width, height) {
@@ -844,7 +880,7 @@
       selectionBox.style.height = height + 'px';
       
       const dummyText = document.getElementById('dummy-text');
-      let textSpan = dummyText.querySelector('span');
+      textSpan = dummyText.querySelector('span');
       if (!textSpan) {
         textSpan = document.createElement('span');
         textSpan.textContent = sampleText;
@@ -920,6 +956,87 @@
           console.error('Error fetching sample text:', error);
         });
     });
+
+    const startRow = parseInt(document.getElementById('startRow').value) || 1;
+    const baseName = document.getElementById('baseName').value.trim() || 'image';
+    const startNumber = parseInt(document.getElementById('startNumber').value) || 1;
+
+    // Load saved settings
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedSettings = JSON.parse(localStorage.getItem('imgtoolSettings') || '{}');
+      
+      // Restore font settings
+      if (savedSettings.fontFamily) {
+        document.getElementById('font_name').value = savedSettings.fontFamily;
+      }
+      if (savedSettings.fontSize) {
+        document.getElementById('font_size_number').value = savedSettings.fontSize;
+      }
+      if (savedSettings.fontWeight) {
+        document.getElementById('fontWeight').value = savedSettings.fontWeight;
+      }
+      
+      // Restore color settings
+      if (savedSettings.textColor) {
+        document.getElementById('font_color').value = savedSettings.textColor;
+      }
+      if (savedSettings.backgroundColor) {
+        document.getElementById('text_background_color').value = savedSettings.backgroundColor;
+      }
+      
+      // Restore alignment settings
+      if (savedSettings.textAlign) {
+        document.getElementById('alignment').value = savedSettings.textAlign;
+      }
+      if (savedSettings.verticalAlign) {
+        document.getElementById('verticalAlign').value = savedSettings.verticalAlign;
+      }
+      
+      // Restore sheet settings
+      if (savedSettings.sheetName) {
+        document.getElementById('sheet_name').value = savedSettings.sheetName;
+      }
+      if (savedSettings.baseName) {
+        document.getElementById('baseName').value = savedSettings.baseName;
+      }
+      if (savedSettings.startNumber) {
+        document.getElementById('startNumber').value = savedSettings.startNumber;
+      }
+      if (savedSettings.startRow) {
+        document.getElementById('startRow').value = savedSettings.startRow;
+      }
+    });
+
+    // Save settings when changed
+    function saveSettings() {
+      const settings = {
+        fontFamily: document.getElementById('font_name').value,
+        fontSize: document.getElementById('font_size_number').value,
+        fontWeight: document.getElementById('fontWeight').value,
+        textColor: document.getElementById('font_color').value,
+        backgroundColor: document.getElementById('text_background_color').value,
+        textAlign: document.getElementById('alignment').value,
+        verticalAlign: document.getElementById('verticalAlign').value,
+        sheetName: document.getElementById('sheet_name').value,
+        baseName: document.getElementById('baseName').value,
+        startNumber: document.getElementById('startNumber').value,
+        startRow: document.getElementById('startRow').value
+      };
+      localStorage.setItem('imgtoolSettings', JSON.stringify(settings));
+    }
+
+    // Add event listeners to save settings on change
+    document.getElementById('font_name').addEventListener('change', saveSettings);
+    document.getElementById('font_size_number').addEventListener('change', saveSettings);
+    document.getElementById('fontWeight').addEventListener('change', saveSettings);
+    document.getElementById('font_color').addEventListener('input', saveSettings);
+    document.getElementById('text_background_color').addEventListener('input', saveSettings);
+    document.getElementById('alignment').addEventListener('change', saveSettings);
+    document.getElementById('verticalAlign').addEventListener('change', saveSettings);
+    document.getElementById('sheet_name').addEventListener('change', saveSettings);
+    document.getElementById('baseName').addEventListener('change', saveSettings);
+    document.getElementById('startNumber').addEventListener('change', saveSettings);
+    document.getElementById('startRow').addEventListener('change', saveSettings);
   </script>
 </body>
 </html>
