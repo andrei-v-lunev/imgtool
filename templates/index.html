@@ -146,6 +146,55 @@
       width: 100%;
     }
 
+    .color-picker-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .color-picker-group .color-picker {
+      flex: 0 0 36px;
+      width: 36px;
+      min-width: 36px;
+    }
+
+    .color-hex-input {
+      flex: 1;
+      height: 28px;
+      padding: 2px 6px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .eyedropper-btn {
+      height: 28px;
+      width: 28px;
+      min-width: 28px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f8f9fa;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .eyedropper-btn.active,
+    .eyedropper-btn:hover {
+      background: #e9ecef;
+      border-color: #007bff;
+      color: #007bff;
+    }
+    
+    .eyedropper-mode {
+      cursor: crosshair !important;
+    }
+
     .panel-section {
       padding: 12px;
       border-bottom: 1px solid #eee;
@@ -460,7 +509,10 @@
 
                 <div class="form-group">
                   <label for="font_color">Color</label>
-                  <input type="color" name="font_color" id="font_color" value="#ffffff" class="color-picker">
+                  <div class="color-picker-group">
+                    <input type="color" name="font_color" id="font_color" value="#ffffff" class="color-picker">
+                    <input type="text" name="font_color_hex" id="font_color_hex" value="#ffffff" placeholder="#FFFFFF" class="color-hex-input">
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -502,7 +554,10 @@
               <div id="background-settings" style="display: none;">
                 <div class="form-group" id="background-color-group">
                   <label for="text_background_color">Background Color</label>
-                  <input type="color" name="text_background_color" id="text_background_color" value="#000000" class="color-picker">
+                  <div class="color-picker-group">
+                    <input type="color" name="text_background_color" id="text_background_color" value="#000000" class="color-picker">
+                    <input type="text" name="text_background_color_hex" id="text_background_color_hex" value="#000000" placeholder="#000000" class="color-hex-input">
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -618,425 +673,13 @@
     </div>
   </div>
 
+  <!-- Sample text data for JS -->
   <script>
-    // Add sample text variable
+    // Make sample text available to JS
     const sampleText = "{{ sample_text }}";
-    const imageFileInput = document.getElementById('image_file');
-    const previewSection = document.querySelector('.preview-section');
-    const previewContainer = document.getElementById('preview-container');
-    const previewImage = document.getElementById('preview-image');
-    const selectionBox = document.getElementById('selection-box');
-    const dummyText = document.getElementById('dummy-text');
-    const textXInput = document.getElementById('text_x');
-    const textYInput = document.getElementById('text_y');
-    const textWidthInput = document.getElementById('text_width');
-    const textHeightInput = document.getElementById('text_height');
-    const fileInputLabel = document.querySelector('.file-input-label');
-    let textSpan = null; // Define textSpan globally
-
-    let isSelecting = false;
-    let startX, startY;
-
-    // File input handling
-    imageFileInput.addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) {
-        previewSection.style.display = 'none';
-        return;
-      }
-      
-      fileInputLabel.textContent = file.name;
-      
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        previewImage.src = event.target.result;
-        previewSection.style.display = 'block';
-        previewContainer.style.display = 'flex';
-        selectionBox.style.display = 'none';
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // Drag and drop handling
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      fileInputLabel.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-      fileInputLabel.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      fileInputLabel.addEventListener(eventName, unhighlight, false);
-    });
-
-    function highlight(e) {
-      fileInputLabel.classList.add('highlight');
-    }
-
-    function unhighlight(e) {
-      fileInputLabel.classList.remove('highlight');
-    }
-
-    fileInputLabel.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-      const dt = e.dataTransfer;
-      const file = dt.files[0];
-      if (!file) {
-        previewSection.style.display = 'none';
-        return;
-      }
-
-      imageFileInput.files = dt.files;
-      fileInputLabel.textContent = file.name;
-      
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        previewImage.src = event.target.result;
-        previewSection.style.display = 'block';
-        previewContainer.style.display = 'flex';
-        selectionBox.style.display = 'none';
-      };
-      reader.readAsDataURL(file);
-    }
-
-    // Selection box handling
-    previewContainer.addEventListener('mousedown', function(e) {
-      if (e.target !== previewImage) return;
-      e.preventDefault();
-      
-      const rect = previewImage.getBoundingClientRect();
-      const scaleX = previewImage.naturalWidth / rect.width;
-      const scaleY = previewImage.naturalHeight / rect.height;
-      
-      startX = e.clientX - rect.left;
-      startY = e.clientY - rect.top;
-      
-      isSelecting = true;
-      selectionBox.style.display = 'block';
-      selectionBox.style.left = startX + 'px';
-      selectionBox.style.top = startY + 'px';
-      selectionBox.style.width = '0px';
-      selectionBox.style.height = '0px';
-      
-      // Store actual image coordinates
-      textXInput.value = Math.floor(startX * scaleX);
-      textYInput.value = Math.floor(startY * scaleY);
-    });
-
-    previewContainer.addEventListener('mousemove', function(e) {
-      if (!isSelecting) return;
-      e.preventDefault();
-      
-      const rect = previewImage.getBoundingClientRect();
-      const scaleX = previewImage.naturalWidth / rect.width;
-      const scaleY = previewImage.naturalHeight / rect.height;
-      
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top;
-      
-      const width = Math.abs(currentX - startX);
-      const height = Math.abs(currentY - startY);
-      const left = Math.min(startX, currentX);
-      const top = Math.min(startY, currentY);
-      
-      selectionBox.style.left = left + 'px';
-      selectionBox.style.top = top + 'px';
-      selectionBox.style.width = width + 'px';
-      selectionBox.style.height = height + 'px';
-      
-      // Store actual image coordinates
-      textXInput.value = Math.floor(left * scaleX);
-      textYInput.value = Math.floor(top * scaleY);
-      textWidthInput.value = Math.floor(width * scaleX);
-      textHeightInput.value = Math.floor(height * scaleY);
-      
-      updatePreview();
-    });
-
-    document.addEventListener('mouseup', function() {
-      if (isSelecting) {
-      isSelecting = false;
-        if (parseInt(textWidthInput.value) === 0 || parseInt(textHeightInput.value) === 0) {
-          const rect = previewImage.getBoundingClientRect();
-          const scaleX = previewImage.naturalWidth / rect.width;
-          const scaleY = previewImage.naturalHeight / rect.height;
-      
-        selectionBox.style.width = '100px';
-        selectionBox.style.height = '50px';
-          textWidthInput.value = Math.floor(100 * scaleX);
-          textHeightInput.value = Math.floor(50 * scaleY);
-        }
-        updatePreview();
-      }
-    });
-
-    // Background settings visibility toggle
-    const textBackgroundCheck = document.getElementById('text_background');
-    const backgroundSettings = document.getElementById('background-settings');
-    
-    textBackgroundCheck.addEventListener('change', function() {
-      backgroundSettings.style.display = this.checked ? 'block' : 'none';
-      updatePreview();
-    });
-
-    // Initialize background settings visibility
-    backgroundSettings.style.display = textBackgroundCheck.checked ? 'block' : 'none';
-
-    // Sync range and number inputs
-    function setupRangeWithNumber(rangeName) {
-      const range = document.getElementById(rangeName);
-      const number = document.getElementById(rangeName + '_number');
-      
-      range.addEventListener('input', function() {
-        number.value = this.value;
-        updatePreview();
-      });
-      
-      number.addEventListener('input', function() {
-        range.value = this.value;
-        updatePreview();
-      });
-    }
-
-    setupRangeWithNumber('bg_vertical_padding');
-    setupRangeWithNumber('bg_horizontal_padding');
-    setupRangeWithNumber('bg_corner_radius');
-    setupRangeWithNumber('font_size');
-
-    function updatePreview() {
-      if (!selectionBox || selectionBox.style.display === 'none') return;
-      
-      // Get or create the textSpan element
-      const dummyText = document.getElementById('dummy-text');
-      textSpan = dummyText.querySelector('span');
-      if (!textSpan) {
-        textSpan = document.createElement('span');
-        textSpan.textContent = sampleText;
-        dummyText.innerHTML = '';
-        dummyText.appendChild(textSpan);
-      }
-      
-      const x = parseInt(document.getElementById('text_x').value);
-      const y = parseInt(document.getElementById('text_y').value);
-      const width = parseInt(document.getElementById('text_width').value);
-      const height = parseInt(document.getElementById('text_height').value);
-      
-      selectionBox.style.left = x + 'px';
-      selectionBox.style.top = y + 'px';
-      selectionBox.style.width = width + 'px';
-      selectionBox.style.height = height + 'px';
-      
-      textSpan.style.width = width + 'px';
-      textSpan.style.height = height + 'px';
-      textSpan.style.left = x + 'px';
-      textSpan.style.top = y + 'px';
-      
-      // Update text alignment
-      textSpan.style.textAlign = document.getElementById('alignment').value;
-      
-      // Update text color and font size
-      textSpan.style.color = document.getElementById('font_color').value;
-      textSpan.style.fontSize = document.getElementById('font_size').value + 'px';
-      
-      // Update font family
-      const fontSelect = document.getElementById('font_name');
-      const selectedFont = fontSelect.options[fontSelect.selectedIndex].value;
-      // Extract font family name from file name (remove extension)
-      const fontFamily = selectedFont.replace(/\.(ttf|otf)$/i, '');
-      textSpan.style.fontFamily = `"${fontFamily}", sans-serif`;
-      
-      // Update text background
-      const useBackground = document.getElementById('text_background').checked;
-      if (useBackground) {
-          textSpan.style.backgroundColor = document.getElementById('text_background_color').value;
-          textSpan.style.padding = '10px';
-          textSpan.style.borderRadius = '5px';
-      } else {
-          textSpan.style.backgroundColor = 'transparent';
-          textSpan.style.padding = '0';
-      }
-    }
-
-    // Add event listeners for background color changes
-    document.getElementById('text_background_color').addEventListener('input', updatePreview);
-    document.getElementById('font_color').addEventListener('input', updatePreview);
-    
-    // Add font change listener
-    document.getElementById('font_name').addEventListener('change', updatePreview);
-
-    // Update the showSelectionBox function to include preview updates
-    function showSelectionBox(x, y, width, height) {
-      selectionBox.style.display = 'block';
-      selectionBox.style.left = x + 'px';
-      selectionBox.style.top = y + 'px';
-      selectionBox.style.width = width + 'px';
-      selectionBox.style.height = height + 'px';
-      
-      const dummyText = document.getElementById('dummy-text');
-      textSpan = dummyText.querySelector('span');
-      if (!textSpan) {
-        textSpan = document.createElement('span');
-        textSpan.textContent = sampleText;
-        dummyText.innerHTML = '';
-        dummyText.appendChild(textSpan);
-      }
-      
-      updatePreview();
-    }
-
-    // Add alignment button handling
-    const alignmentButtons = document.querySelectorAll('.alignment-buttons button');
-    const alignmentInput = document.getElementById('alignment');
-
-    alignmentButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        // Remove active class from all buttons
-        alignmentButtons.forEach(btn => btn.classList.remove('active'));
-        // Add active class to clicked button
-        this.classList.add('active');
-        // Update hidden input value
-        alignmentInput.value = this.dataset.align;
-        // Update preview
-        updatePreview();
-      });
-    });
-
-    // Help modal functionality
-    const modal = document.getElementById('helpModal');
-    const helpBtn = document.getElementById('helpBtn');
-    const closeBtn = document.querySelector('.modal-close');
-
-    helpBtn.onclick = function() {
-      modal.style.display = "block";
-    }
-
-    closeBtn.onclick = function() {
-      modal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-      if (event.target == modal) {
-        modal.style.display = "none";
-      }
-    }
-
-    // Sheet selector functionality
-    const sheetSelect = document.getElementById('sheet_name');
-    sheetSelect.addEventListener('change', function() {
-      // Update hidden input value
-      const selectedSheet = this.value;
-      
-      // Fetch new sample text
-      fetch(`/sample_text/${selectedSheet}`)
-        .then(response => response.json())
-        .then(data => {
-          // Update sample text
-          const dummyText = document.getElementById('dummy-text');
-          let textSpan = dummyText.querySelector('span');
-          if (!textSpan) {
-            textSpan = document.createElement('span');
-            dummyText.innerHTML = '';
-            dummyText.appendChild(textSpan);
-          }
-          textSpan.textContent = data.sample_text;
-          
-          // Update preview if selection box is visible
-          if (selectionBox.style.display !== 'none') {
-            updatePreview();
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching sample text:', error);
-        });
-    });
-
-    const startRow = parseInt(document.getElementById('startRow').value) || 1;
-    const baseName = document.getElementById('baseName').value.trim() || 'image';
-    const startNumber = parseInt(document.getElementById('startNumber').value) || 1;
-
-    // Load saved settings
-    document.addEventListener('DOMContentLoaded', function() {
-      const savedSettings = JSON.parse(localStorage.getItem('imgtoolSettings') || '{}');
-      
-      // Restore font settings
-      if (savedSettings.fontFamily) {
-        document.getElementById('font_name').value = savedSettings.fontFamily;
-      }
-      if (savedSettings.fontSize) {
-        document.getElementById('font_size_number').value = savedSettings.fontSize;
-      }
-      if (savedSettings.fontWeight) {
-        document.getElementById('fontWeight').value = savedSettings.fontWeight;
-      }
-      
-      // Restore color settings
-      if (savedSettings.textColor) {
-        document.getElementById('font_color').value = savedSettings.textColor;
-      }
-      if (savedSettings.backgroundColor) {
-        document.getElementById('text_background_color').value = savedSettings.backgroundColor;
-      }
-      
-      // Restore alignment settings
-      if (savedSettings.textAlign) {
-        document.getElementById('alignment').value = savedSettings.textAlign;
-      }
-      if (savedSettings.verticalAlign) {
-        document.getElementById('verticalAlign').value = savedSettings.verticalAlign;
-      }
-      
-      // Restore sheet settings
-      if (savedSettings.sheetName) {
-        document.getElementById('sheet_name').value = savedSettings.sheetName;
-      }
-      if (savedSettings.baseName) {
-        document.getElementById('baseName').value = savedSettings.baseName;
-      }
-      if (savedSettings.startNumber) {
-        document.getElementById('startNumber').value = savedSettings.startNumber;
-      }
-      if (savedSettings.startRow) {
-        document.getElementById('startRow').value = savedSettings.startRow;
-      }
-    });
-
-    // Save settings when changed
-    function saveSettings() {
-      const settings = {
-        fontFamily: document.getElementById('font_name').value,
-        fontSize: document.getElementById('font_size_number').value,
-        fontWeight: document.getElementById('fontWeight').value,
-        textColor: document.getElementById('font_color').value,
-        backgroundColor: document.getElementById('text_background_color').value,
-        textAlign: document.getElementById('alignment').value,
-        verticalAlign: document.getElementById('verticalAlign').value,
-        sheetName: document.getElementById('sheet_name').value,
-        baseName: document.getElementById('baseName').value,
-        startNumber: document.getElementById('startNumber').value,
-        startRow: document.getElementById('startRow').value
-      };
-      localStorage.setItem('imgtoolSettings', JSON.stringify(settings));
-    }
-
-    // Add event listeners to save settings on change
-    document.getElementById('font_name').addEventListener('change', saveSettings);
-    document.getElementById('font_size_number').addEventListener('change', saveSettings);
-    document.getElementById('fontWeight').addEventListener('change', saveSettings);
-    document.getElementById('font_color').addEventListener('input', saveSettings);
-    document.getElementById('text_background_color').addEventListener('input', saveSettings);
-    document.getElementById('alignment').addEventListener('change', saveSettings);
-    document.getElementById('verticalAlign').addEventListener('change', saveSettings);
-    document.getElementById('sheet_name').addEventListener('change', saveSettings);
-    document.getElementById('baseName').addEventListener('change', saveSettings);
-    document.getElementById('startNumber').addEventListener('change', saveSettings);
-    document.getElementById('startRow').addEventListener('change', saveSettings);
   </script>
+  
+  <!-- Load modular JS files -->
+  <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

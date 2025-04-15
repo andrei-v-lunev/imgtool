@@ -1,7 +1,7 @@
 import os
 import sys
 import logging
-from flask import Flask, request, render_template, send_file, redirect, url_for, flash, jsonify
+from flask import Flask, request, render_template, send_file, redirect, url_for, flash, jsonify, send_from_directory
 from PIL import Image, ImageDraw, ImageFont
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -422,6 +422,10 @@ def get_sample_text(sheet_name):
     except Exception as e:
         logger.error(f"Error fetching sample text: {str(e)}")
         return jsonify({'sample_text': "Sample text will appear here"}), 500
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('static', 'favicon.ico', mimetype='image/x-icon')
 
 if __name__ == '__main__':
     # Ensure required directories exist

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Components</title>
+  <style>
+    body { font-family: sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+    h1 { color: #333; }
+    .test-container { max-width: 800px; margin: 0 auto; }
+    .test-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; }
+    button { padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Component Tests</h1>
+    
+    <div class="test-section">
+      <h2>State Management Test</h2>
+      <div>
+        <button id="stateTestBtn">Test State</button>
+        <button id="subscribeTestBtn">Test Subscriptions</button>
+        <div id="stateOutput"></div>
+        <div id="subscriptionOutput"></div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>File Validation Test</h2>
+      <div>
+        <input type="file" id="testFileInput">
+        <button id="validateFileBtn">Validate File</button>
+        <div id="fileValidationOutput"></div>
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h2>Error Handling Test</h2>
+      <div>
+        <button id="testErrorBtn">Test Error</button>
+        <button id="testSuccessBtn">Test Success</button>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module">
+    // Import components
+    import { state } from './js/state.js';
+    import { validateImageFile } from './js/utils/fileUtils.js';
+    import { showErrorToast, showSuccessToast } from './js/utils/errorHandler.js';
+    
+    // State Test
+    document.getElementById('stateTestBtn').addEventListener('click', () => {
+      // Set up state
+      state.set('settings.fontSize', 32);
+      state.set('settings.fontColor', '#ff0000');
+      
+      // Subscribe to state changes
+      const unsubscribe = state.subscribe('settings.fontSize', (value) => {
+        console.log('Font size changed:', value);
+      });
+      
+      // Change state again
+      state.set('settings.fontSize', 48);
+      
+      // Output current state
+      const output = document.getElementById('stateOutput');
+      output.innerHTML = `<pre>${JSON.stringify(state.settings, null, 2)}</pre>`;
+      
+      // Clean up subscription
+      unsubscribe();
+      
+      showSuccessToast('State test completed');
+    });
+    
+    // Subscription Test
+    document.getElementById('subscribeTestBtn').addEventListener('click', () => {
+      const output = document.getElementById('subscriptionOutput');
+      output.innerHTML = '<div>Testing subscriptions...</div>';
+      
+      // Set up a subscription to track changes
+      const updates = [];
+      const unsubscribe = state.subscribe('settings.fontSize', (value) => {
+        updates.push(`Font size changed to: ${value}`);
+        output.innerHTML = `<div>${updates.join('<br>')}</div>`;
+      });
+      
+      // Make several updates to trigger subscription
+      setTimeout(() => state.set('settings.fontSize', 24), 500);
+      setTimeout(() => state.set('settings.fontSize', 36), 1000);
+      setTimeout(() => state.set('settings.fontSize', 48), 1500);
+      
+      // Clean up the subscription after tests
+      setTimeout(() => {
+        unsubscribe();
+        state.set('settings.fontSize', 18); // This shouldn't trigger an update
+        output.innerHTML += '<div><strong>Subscription test complete</strong> (unsubscribed)</div>';
+      }, 2000);
+    });
+    
+    // File Validation Test
+    document.getElementById('validateFileBtn').addEventListener('click', () => {
+      const fileInput = document.getElementById('testFileInput');
+      const file = fileInput.files[0];
+      const output = document.getElementById('fileValidationOutput');
+      
+      if (!file) {
+        output.innerHTML = '<div style="color: #dc3545;">No file selected</div>';
+        return;
+      }
+      
+      const result = validateImageFile(file);
+      
+      if (result.valid) {
+        output.innerHTML = `<div style="color: #28a745;">File is valid: ${file.name} (${file.type}, ${Math.round(file.size / 1024)}KB)</div>`;
+      } else {
+        output.innerHTML = `<div style="color: #dc3545;">Invalid file: ${result.message}</div>`;
+      }
+    });
+    
+    // Error Test
+    document.getElementById('testErrorBtn').addEventListener('click', () => {
+      showErrorToast('This is a test error message');
+    });
+    
+    // Success Test
+    document.getElementById('testSuccessBtn').addEventListener('click', () => {
+      showSuccessToast('This is a test success message');
+    });
+  </script>
+</body>
+</html> 
